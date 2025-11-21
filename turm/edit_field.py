@@ -31,6 +31,13 @@ class EditField:
         self._term.write(self.ps1)
         self._term.flush()
 
+        self._redraw_enabled = True
+
+    def set_redraw(self, v):
+        self._redraw_enabled = v
+        if v:
+            self._redraw()
+
     def move_cursor_left(self, amount=1):
         assert amount > 0
         self._text.move_left(amount)
@@ -61,29 +68,6 @@ class EditField:
         self._term.move_cursor_to(row + self._term_offset.row,
                                   column + self._term_offset.column)
 
-    def _redraw_line(self, row=None):
-        if row is None:
-            self._term.move_cursor_to(None, self._term_offset.column)
-        else:
-            self._term.move_cursor_to(row + self._term_offset.row,
-                                      self._term_offset.column)
-
-        self._term.erase_line()
-
-        if row is None:
-            row, _ = self._text.get_row_and_column()
-
-        prompt = self._prompts[row]
-        self._term.write(prompt)
-
-        line = self._text.get_line(row)
-        if line.endswith('\n'):
-            line = line[:-1]
-
-        self._term.write(line)
-        self._reset_cursor_position()
-        self._term.flush()
-
     def _clear(self):
         for i in range(len(self._prompts)):
             term_line = self._term_offset.row + i
@@ -95,6 +79,9 @@ class EditField:
         self._reset_cursor_position()
 
     def _redraw(self):
+        if not self._redraw_enabled:
+            return
+
         # expand the edit field `window` if there are more lines to print than the number of rows allows
         if self._term_offset.row > 1:
             num_lines = len(self._prompts)
@@ -132,7 +119,6 @@ class EditField:
     def insert(self, char):
         assert 0x20 <= ord(char) <= 0x7e
         self._text.insert(char)
-        # self._redraw_line()
         self._redraw()
 
     def backspace(self):
@@ -143,7 +129,6 @@ class EditField:
             row, _ = self._text.get_row_and_column()
             self._prompts.pop(row + 1)
 
-        # self._redraw_line()
         self._redraw()
 
     def newline(self):
@@ -153,16 +138,6 @@ class EditField:
         # insert a new prompt for the newline
         self._prompts.insert(row, self.ps2)
 
-        # write out enough newlines to display the rest of the lines
-        # TODO this breaks given enough lines.
-        # When trying to move_up past the top of the window, nothing happens and _redraw_line draws over the last line.
-        # When trying to move_down past the bottom the same thing happens. We knew that already but didn't factor in actually moving down, not adding newlines.
-        # self._term.write('\n' * (len(self._prompts) - row))
-        # self._term.flush()
-        # # Starting from the line the newline was added to, redraw every line going down.
-        # for i in range(row - 1, len(self._prompts)):
-        #     self._redraw_line(i)
-        # self._reset_cursor_position()
         self._redraw()
 
     def __str__(self):

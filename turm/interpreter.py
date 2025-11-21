@@ -64,8 +64,10 @@ class Interpreter:
                 self._editor.move_cursor_down(code.amount)
             case escape_codes.BracketedPasteStart():
                 self._bracketed_paste = True
+                self._editor.set_redraw(False)
             case escape_codes.BracketedPasteEnd():
                 self._bracketed_paste = False
+                self._editor.set_redraw(True)
             case _:
                 raise Exception()
 
